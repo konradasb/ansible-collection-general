@@ -1,0 +1,73 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Find the user's home and group, {{ __dicer_user }}
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ __dicer_user }}"
+  when: ansible_facts['system'] == 'Linux'
+
+- name: Find the user's home and group on macOS, {{ __dicer_user }}
+  ansible.builtin.command:
+    argv:
+      - dscl
+      - .
+      - -read
+      - "/Users/{{ __dicer_user }}"
+      - NFSHomeDirectory
+      - PrimaryGroupID
+  register: __dicer_user_record
+  changed_when: false
+  check_mode: false
+  when: ansible_facts['system'] == 'Darwin'
+
+- name: Set the user's directories, {{ __dicer_user }}
+  ansible.builtin.set_fact:
+    __dicer_user_home: >-
+      {{
+        ansible_facts['getent_passwd'][__dicer_user][4]
+        if ansible_facts['system'] == 'Linux'
+        else __dicer_user_record.stdout | regex_findall('^NFSHomeDirectory: (.+)$', multiline=True) | first
+      }}
+    __dicer_user_group: >-
+      {{
+        ansible_facts['getent_passwd'][__dicer_user][2]
+        if ansible_facts['system'] == 'Linux'
+        else __dicer_user_record.stdout | regex_findall('^PrimaryGroupID: (\d+)$', multiline=True) | first
+      }}
+
+- name: Look for the configuration directory's parents, {{ __dicer_user }}
+  ansible.builtin.stat:
+    path: "{{ __dicer_user_home }}/{{ item }}"
+  loop: "{{ __dicer_configuration_parents[ansible_facts['system']] }}"
+  register: __dicer_configuration_parents_stat
+
+# A parent the user has already is left as it is.
+- name: Create the configuration directory's parents, {{ __dicer_user }}
+  ansible.builtin.file:
+    path: "{{ item.stat.path | default(__dicer_user_home ~ '/' ~ item.item) }}"
+    state: directory
+    owner: "{{ __dicer_user }}"
+    group: "{{ __dicer_user_group }}"
+    mode: "0700"
+  loop: "{{ __dicer_configuration_parents_stat.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not item.stat.exists
+
+- name: Create the configuration directory, {{ __dicer_user }}
+  ansible.builtin.file:
+    path: "{{ __dicer_user_home }}/{{ __dicer_configuration_directories[ansible_facts['system']] }}"
+    state: directory
+    owner: "{{ __dicer_user }}"
+    group: "{{ __dicer_user_group }}"
+    mode: "0700"
+
+- name: Write the remotes, {{ __dicer_user }}
+  ansible.builtin.template:
+    src: remotes.yaml.j2
+    dest: "{{ __dicer_user_home }}/{{ __dicer_configuration_directories[ansible_facts['system']] }}/remotes.yaml"
+    owner: "{{ __dicer_user }}"
+    group: "{{ __dicer_user_group }}"
+    mode: "0600"

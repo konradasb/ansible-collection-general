@@ -1,0 +1,65 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+argument_specs:
+  main:
+    short_description: Install the dicer command line
+    description:
+      - Installs the C(dicer) command line from Dicer's GitHub releases, for
+        a machine that talks to a daemon elsewhere, and writes users'
+        remotes.
+      - Supports Linux and macOS, on x86_64 and arm64.
+      - Installs C(dicer) whether or not the C(dicer) package, which the
+        P(konradasb.general.dicerd#role) role installs, put one in C(/usr/bin).
+    author:
+      - konradasb
+    options:
+      dicer_version:
+        description:
+          - The release to install, such as V(0.3.0).
+          - V(latest) installs the newest release, and upgrades to each new
+            one as the role runs.
+          - A version older than the installed one downgrades it.
+        type: str
+        default: latest
+      dicer_install_directory:
+        description:
+          - The directory the C(dicer) binary is installed to.
+        type: path
+        default: /usr/local/bin
+      dicer_releases_url:
+        description:
+          - The releases the archives, and C(checksums.txt), which each
+            archive is checked against, are downloaded from.
+        type: str
+        default: https://github.com/konradasb/dicer/releases
+      dicer_remotes_users:
+        description:
+          - Users whose C(remotes.yaml) the role writes, in their
+            configuration directory, C(~/.config/dicer) on Linux and
+            C(~/Library/Application Support/dicer) on macOS.
+          - The file is replaced, remotes added with C(dicer remote add)
+            included.
+          - Empty leaves every user's file as it is.
+        type: list
+        elements: str
+        default: []
+      dicer_remotes:
+        description:
+          - The remotes written, by name, as C(remotes.yaml) has them.
+          - Each has an C(address), a daemon's socket, as
+            V(unix:///run/dicer/dicer.sock), or its TCP listener, as
+            V(host:7443).
+          - A TCP one may have C(tls), with C(cert_file) and C(key_file),
+            the client certificate and its key, C(ca_file), the CAs the
+            daemon's certificate is checked against, and C(server_name), the
+            name it must carry. Without C(tls), the connection is plaintext.
+        type: dict
+        default: {}
+      dicer_remote_current:
+        description:
+          - The remote commands go to unless told otherwise.
+          - Empty is the local daemon.
+        type: str
+        default: ""

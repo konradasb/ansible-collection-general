@@ -1,0 +1,105 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Write the TLS files
+  when: __dicerd_tls_enabled
+  block:
+    - name: Create the TLS directory
+      ansible.builtin.file:
+        path: "{{ __dicerd_tls_directory }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Write the server certificate
+      ansible.builtin.copy:
+        content: "{{ dicerd_tls_certificate }}"
+        dest: "{{ __dicerd_tls_directory }}/server.pem"
+        owner: root
+        group: root
+        mode: "0644"
+      when: dicerd_tls_certificate | length > 0
+      notify: Restart dicerd
+
+    - name: Write the private key
+      ansible.builtin.copy:
+        content: "{{ dicerd_tls_private_key }}"
+        dest: "{{ __dicerd_tls_directory }}/server-key.pem"
+        owner: root
+        group: root
+        mode: "0600"
+      when: dicerd_tls_private_key | length > 0
+      no_log: true
+      notify: Restart dicerd
+
+    - name: Write the client CA
+      ansible.builtin.copy:
+        content: "{{ dicerd_tls_client_ca }}"
+        dest: "{{ __dicerd_tls_directory }}/ca.pem"
+        owner: root
+        group: root
+        mode: "0644"
+      when: dicerd_tls_client_ca | length > 0
+      notify: Restart dicerd
+
+# The service's StateDirectory and RuntimeDirectory make the default ones.
+- name: Create the data and run directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop: "{{ __dicerd_read_write_paths }}"
+
+- name: Let the service write to the data and run directories
+  when: __dicerd_read_write_paths | length > 0
+  block:
+    - name: Create the service's drop-in directory
+      ansible.builtin.file:
+        path: "{{ __dicerd_service_dropin_directory }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Write the drop-in
+      ansible.builtin.template:
+        src: directories.conf.j2
+        dest: "{{ __dicerd_service_dropin_directory }}/50-ansible-directories.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart dicerd
+
+- name: Remove the drop-in
+  ansible.builtin.file:
+    path: "{{ __dicerd_service_dropin_directory }}/50-ansible-directories.conf"
+    state: absent
+  when: __dicerd_read_write_paths | length == 0
+  notify:
+    - Reload systemd
+    - Restart dicerd
+
+- name: Write the configuration
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ __dicerd_config_file }}"
+    owner: root
+    group: root
+    mode: "0640"
+    validate: dicerd validate --config %s
+  notify: Restart dicerd
+
+- name: Add users to the dicer group
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: dicer
+    append: true
+  loop: "{{ dicerd_group_members }}"
+  # In check mode, nor is the group the package would create.
+  when: not (ansible_check_mode and __dicerd_package is skipped)

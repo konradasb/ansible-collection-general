@@ -1,0 +1,36 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Converge
+  hosts: all
+  vars:
+    dicerd_kvm_check: false
+    dicerd_config:
+      data_dir: /srv/dicer
+      log_level: debug
+      api:
+        tcp:
+          listen: 127.0.0.1:7443
+      metrics:
+        enable: true
+    dicerd_group_members:
+      - molecule
+  pre_tasks:
+    - name: Read the TLS files prepare made
+      ansible.builtin.slurp:
+        src: "/root/{{ item }}"
+      loop:
+        - server.pem
+        - server-key.pem
+        - ca.pem
+      register: __molecule_tls
+      no_log: true
+  tasks:
+    - name: Run the role
+      ansible.builtin.include_role:
+        name: konradasb.general.dicerd
+      vars:
+        dicerd_tls_certificate: "{{ __molecule_tls.results[0].content | b64decode }}"
+        dicerd_tls_private_key: "{{ __molecule_tls.results[1].content | b64decode }}"
+        dicerd_tls_client_ca: "{{ __molecule_tls.results[2].content | b64decode }}"

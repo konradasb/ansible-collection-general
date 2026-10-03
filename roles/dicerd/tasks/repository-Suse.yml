@@ -1,0 +1,19 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Trust Dicer's key
+  ansible.builtin.rpm_key:
+    key: "{{ dicerd_repository_key_url }}"
+    state: present
+
+- name: Add the Dicer repository
+  community.general.zypper_repository:
+    name: dicer
+    description: Dicer
+    repo: "{{ dicerd_repository_url }}/rpm"
+    enabled: true
+    disable_gpg_check: false
+    autorefresh: true
+    state: present
+  register: __dicerd_repository

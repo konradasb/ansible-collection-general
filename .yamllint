@@ -1,0 +1,17 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+extends: default
+
+rules:
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  braces:
+    max-spaces-inside: 1
+  line-length:
+    max: 160
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true

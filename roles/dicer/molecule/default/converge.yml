@@ -1,0 +1,23 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: Run the role
+      ansible.builtin.include_role:
+        name: konradasb.general.dicer
+      vars:
+        dicer_remotes_users:
+          - alice
+        dicer_remotes:
+          compute1:
+            address: compute1.example.com:7443
+            tls:
+              ca_file: /home/alice/.dicer/ca.pem
+              cert_file: /home/alice/.dicer/client.pem
+              key_file: /home/alice/.dicer/client-key.pem
+          socket:
+            address: unix:///run/dicer/dicer.sock
+        dicer_remote_current: compute1

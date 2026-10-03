@@ -1,0 +1,31 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# The archives' names for the platforms the role supports.
+__dicer_operating_systems:
+  Linux: linux
+  Darwin: darwin
+__dicer_architectures:
+  x86_64: amd64
+  aarch64: arm64
+  arm64: arm64
+
+__dicer_operating_system: "{{ __dicer_operating_systems[ansible_facts['system']] }}"
+__dicer_architecture: "{{ __dicer_architectures[ansible_facts['architecture']] }}"
+
+__dicer_binary: "{{ dicer_install_directory }}/dicer"
+
+# Where each operating system keeps a user's configuration, below their home,
+# as Go's os.UserConfigDir has it.
+__dicer_configuration_directories:
+  Linux: .config/dicer
+  Darwin: Library/Application Support/dicer
+
+# The parents of the configuration directory that a user may not have yet,
+# which the role makes theirs. macOS makes Library/Application Support with
+# the home.
+__dicer_configuration_parents:
+  Linux:
+    - .config
+  Darwin: []

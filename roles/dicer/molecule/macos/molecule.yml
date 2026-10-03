@@ -1,0 +1,33 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# The role on the machine molecule runs on: in CI, a macOS runner, which
+# each platform names. It writes that user's remotes, so converge refuses to
+# run outside CI.
+driver:
+  name: default
+  options:
+    managed: false
+
+platforms:
+  - name: macos-latest
+  - name: macos-15-intel
+
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - syntax
+    - converge
+    - idempotence
+    - verify

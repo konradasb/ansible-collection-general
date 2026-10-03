@@ -1,0 +1,35 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+galaxy_info:
+  author: konradasb
+  description: Install and configure Dicer, which runs virtual machines from container images.
+  license: MIT
+  min_ansible_version: "2.18"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Fedora
+      versions:
+        - all
+    - name: EL
+      versions:
+        - "9"
+        - "10"
+    - name: opensuse
+      versions:
+        - all
+  galaxy_tags:
+    - dicer
+    - virtualization
+    - kvm
+    - microvm
+
+dependencies: []

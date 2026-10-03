@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+#
+# The daemons dicer talks to. `dicer remote` changes this file, and Ansible
+# replaces what it changes the next time it runs. See
+# https://dicer.sh/docs/guides/remote-access/
+
+{{ ({'current': dicer_remote_current} if dicer_remote_current | length > 0 else {})
+   | combine({'remotes': dicer_remotes} if dicer_remotes | length > 0 else {})
+   | to_nice_yaml(indent=2, sort_keys=false) }}

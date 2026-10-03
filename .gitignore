@@ -1,0 +1,10 @@
+# Built collections
+/*.tar.gz
+
+# ansible-lint, molecule and ansible-test
+.ansible/
+/tests/output/
+
+# Python
+__pycache__/
+.venv/

@@ -1,0 +1,66 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+__dicerd_config_directory: /etc/dicerd
+__dicerd_config_file: "{{ __dicerd_config_directory }}/config.yaml"
+__dicerd_tls_directory: "{{ __dicerd_config_directory }}/tls"
+__dicerd_service_dropin_directory: /etc/systemd/system/dicerd.service.d
+
+# Where the package's service lets the daemon write: the paths it keeps by
+# default.
+__dicerd_data_directory_default: /var/lib/dicer
+__dicerd_run_directory_default: /run/dicer
+
+# What every host's configuration starts from. The package's own file sets
+# the same, and the daemon's defaults the rest.
+__dicerd_config_base:
+  api:
+    socket:
+      group: dicer
+
+# api.tcp.tls, from the TLS files the role writes.
+__dicerd_config_tls:
+  api:
+    tcp:
+      tls: >-
+        {{
+          {}
+          | combine({'cert_file': __dicerd_tls_directory ~ '/server.pem'} if dicerd_tls_certificate | length > 0 else {})
+          | combine({'key_file': __dicerd_tls_directory ~ '/server-key.pem'} if dicerd_tls_private_key | length > 0 else {})
+          | combine({'client_ca_file': __dicerd_tls_directory ~ '/ca.pem'} if dicerd_tls_client_ca | length > 0 else {})
+        }}
+
+__dicerd_tls_enabled: >-
+  {{ (dicerd_tls_certificate | length > 0) or (dicerd_tls_private_key | length > 0) or (dicerd_tls_client_ca | length > 0) }}
+
+__dicerd_config_effective: >-
+  {{
+    __dicerd_config_base
+    | combine(__dicerd_config_tls if __dicerd_tls_enabled else {}, recursive=True)
+    | combine(dicerd_config, recursive=True)
+  }}
+
+__dicerd_data_directory: "{{ __dicerd_config_effective.data_dir | default(__dicerd_data_directory_default) }}"
+__dicerd_run_directory: "{{ __dicerd_config_effective.run_dir | default(__dicerd_run_directory_default) }}"
+
+# The directories the service must be let write besides its defaults.
+__dicerd_read_write_paths: >-
+  {{
+    ([__dicerd_data_directory] if __dicerd_data_directory != __dicerd_data_directory_default else [])
+    + ([__dicerd_run_directory] if __dicerd_run_directory != __dicerd_run_directory_default else [])
+  }}
+
+# In check mode, a repository the role would add, or whose module cannot
+# tell, has not been added, so its package cannot be found yet.
+__dicerd_repository_pending: >-
+  {{ ansible_check_mode and __dicerd_repository is defined and (__dicerd_repository is changed or __dicerd_repository is skipped) }}
+
+__dicerd_supported_os_families:
+  - Debian
+  - RedHat
+  - Suse
+
+__dicerd_supported_architectures:
+  - x86_64
+  - aarch64

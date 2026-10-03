@@ -1,0 +1,30 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+name: lint-pr
+
+# Pull requests are squash-merged with their title, which release-please
+# reads: a feat makes a minor release, a fix a patch, and a ! a breaking one.
+#
+# pull_request, not pull_request_target: the check only reads the pull
+# request, so it needs neither secrets nor a token that can write.
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

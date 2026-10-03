@@ -1,0 +1,19 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Add the Dicer repository
+  ansible.builtin.deb822_repository:
+    name: dicer
+    types: deb
+    uris: "{{ dicerd_repository_url }}/deb"
+    suites: stable
+    components: main
+    signed_by: "{{ dicerd_repository_key_url }}"
+    install_python_debian: true
+  register: __dicerd_repository
+
+- name: Update the package lists # noqa: no-handler
+  ansible.builtin.apt:
+    update_cache: true
+  when: __dicerd_repository is changed

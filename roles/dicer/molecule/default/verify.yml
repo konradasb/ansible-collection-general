@@ -1,0 +1,67 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read dicer's version
+      ansible.builtin.command: /usr/local/bin/dicer version --format json --remote unix:///nonexistent --timeout 1s
+      environment:
+        DICER_CONFIG_DIR: /nonexistent
+      register: __verify_version
+      changed_when: false
+      failed_when: __verify_version.stdout | length == 0
+
+    - name: Check that the pinned version replaced the latest
+      ansible.builtin.assert:
+        that:
+          - (__verify_version.stdout | from_json).client.version == '0.2.0'
+
+    - name: Look at alice's configuration
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /home/alice/.config
+        - /home/alice/.config/dicer
+        - /home/alice/.config/dicer/remotes.yaml
+      register: __verify_configuration
+
+    - name: Check that alice owns it, alone
+      ansible.builtin.assert:
+        that:
+          - item.stat.pw_name == 'alice'
+          - item.stat.mode in ['0700', '0600']
+      loop: "{{ __verify_configuration.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Read alice's remotes
+      ansible.builtin.slurp:
+        src: /home/alice/.config/dicer/remotes.yaml
+      register: __verify_remotes_file
+
+    - name: Check alice's remotes
+      vars:
+        __verify_remotes: "{{ __verify_remotes_file.content | b64decode | from_yaml }}"
+      ansible.builtin.assert:
+        that:
+          - __verify_remotes.current == 'compute1'
+          - __verify_remotes.remotes.compute1.address == 'compute1.example.com:7443'
+          - __verify_remotes.remotes.compute1.tls.ca_file == '/home/alice/.dicer/ca.pem'
+          - __verify_remotes.remotes.socket.address == 'unix:///run/dicer/dicer.sock'
+
+    # dicer itself reads the file.
+    - name: List alice's remotes with dicer
+      ansible.builtin.command: /usr/local/bin/dicer remote list
+      environment:
+        DICER_CONFIG_DIR: /home/alice/.config/dicer
+      register: __verify_remote_list
+      changed_when: false
+
+    - name: Check that dicer read them
+      ansible.builtin.assert:
+        that:
+          - "'compute1' in __verify_remote_list.stdout"
+          - "'socket' in __verify_remote_list.stdout"

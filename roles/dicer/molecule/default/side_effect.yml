@@ -1,0 +1,13 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# Converge installed the latest release: pinning an older one replaces it.
+- name: Downgrade
+  hosts: all
+  tasks:
+    - name: Run the role with a pinned version
+      ansible.builtin.include_role:
+        name: konradasb.general.dicer
+      vars:
+        dicer_version: 0.2.0

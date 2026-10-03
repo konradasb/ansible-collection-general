@@ -1,0 +1,19 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Check the host
+  ansible.builtin.import_tasks: assert.yml
+
+- name: Add the Dicer repository
+  ansible.builtin.include_tasks: "repository-{{ ansible_facts['os_family'] }}.yml"
+  when: dicerd_repository_manage
+
+- name: Install Dicer
+  ansible.builtin.include_tasks: "install-{{ ansible_facts['os_family'] }}.yml"
+
+- name: Configure Dicer
+  ansible.builtin.import_tasks: configure.yml
+
+- name: Run dicerd
+  ansible.builtin.import_tasks: service.yml

@@ -1,0 +1,39 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# erofs-utils is in EPEL on RHEL and its rebuilds, and in Fedora itself.
+- name: Turn EPEL on
+  when:
+    - dicerd_epel_manage
+    - ansible_facts['distribution'] != 'Fedora'
+  block:
+    - name: Install epel-release
+      ansible.builtin.dnf:
+        name: epel-release
+        state: present
+      when: ansible_facts['distribution'] != 'RedHat'
+
+    # RHEL's own repositories do not carry epel-release.
+    - name: Trust EPEL's key
+      ansible.builtin.rpm_key:
+        key: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_facts['distribution_major_version'] }}"
+        state: present
+      when: ansible_facts['distribution'] == 'RedHat'
+
+    - name: Install epel-release on RHEL
+      ansible.builtin.dnf:
+        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_facts['distribution_major_version'] }}.noarch.rpm"
+        state: present
+      when: ansible_facts['distribution'] == 'RedHat'
+
+- name: Add the Dicer repository
+  ansible.builtin.yum_repository:
+    name: dicer
+    description: Dicer
+    baseurl: "{{ dicerd_repository_url }}/rpm"
+    enabled: true
+    gpgcheck: true
+    repo_gpgcheck: true
+    gpgkey: "{{ dicerd_repository_key_url }}"
+  register: __dicerd_repository

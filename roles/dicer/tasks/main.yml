@@ -1,0 +1,33 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Check that the host is supported
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['system'] in __dicer_operating_systems
+      - ansible_facts['architecture'] in __dicer_architectures
+    fail_msg: >-
+      dicer is released for Linux and macOS on x86_64 and arm64, not
+      {{ ansible_facts['system'] }} on {{ ansible_facts['architecture'] }}.
+    quiet: true
+
+- name: Check that each remote has an address
+  ansible.builtin.assert:
+    that:
+      - item.value.address is defined
+      - item.value.address is string
+    fail_msg: The remote {{ item.key }} has no address.
+    quiet: true
+  loop: "{{ dicer_remotes | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Install dicer
+  ansible.builtin.import_tasks: install.yml
+
+- name: Write the users' remotes
+  ansible.builtin.include_tasks: remotes.yml
+  loop: "{{ dicer_remotes_users }}"
+  loop_control:
+    loop_var: __dicer_user

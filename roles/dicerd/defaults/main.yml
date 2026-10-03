@@ -1,0 +1,47 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# The dicer package's version, such as 0.3.0. Empty installs the newest the
+# repository has, and leaves an installed one as it is unless
+# dicerd_package_state is latest.
+dicerd_version: ""
+
+# present or latest. latest upgrades Dicer on every run; it cannot be
+# combined with dicerd_version.
+dicerd_package_state: present
+
+# Add the Dicer package repository, signed with Dicer's key. Off, the
+# package must come from a repository set up some other way.
+dicerd_repository_manage: true
+dicerd_repository_url: https://pkg.dicer.sh
+dicerd_repository_key_url: "{{ dicerd_repository_url }}/gpg.key"
+
+# Turn EPEL on, for erofs-utils, on RHEL and its rebuilds. Fedora needs
+# nothing.
+dicerd_epel_manage: true
+
+# Fail before installing anything unless the host has /dev/kvm.
+dicerd_kvm_check: true
+
+# dicerd's configuration, written to /etc/dicerd/config.yaml as YAML. Every
+# key is described at https://dicer.sh/docs/reference/configuration/; it is
+# merged over the role's base, which gives the daemon's socket to the dicer
+# group, and checked with `dicerd validate` before it replaces the file.
+dicerd_config: {}
+
+# The TLS files of the TCP API, as PEM. Each one given is written under
+# /etc/dicerd/tls and set in api.tcp.tls; api.tcp.listen, in dicerd_config,
+# turns the TCP API on.
+dicerd_tls_certificate: ""
+dicerd_tls_private_key: ""
+dicerd_tls_client_ca: ""
+
+# Users added to the dicer group, which can use the daemon's socket without
+# sudo: as much as root on the host. Users not in the list are left as they
+# are.
+dicerd_group_members: []
+
+dicerd_service_enabled: true
+# started or stopped.
+dicerd_service_state: started

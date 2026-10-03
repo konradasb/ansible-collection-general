@@ -1,0 +1,39 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+namespace: konradasb
+name: general
+version: 0.1.0 # x-release-please-version
+readme: README.md
+authors:
+  - konradasb (https://github.com/konradasb)
+description: Roles to install, configure and run the software konradasb ships, such as Dicer.
+license:
+  - MIT
+tags:
+  - dicer
+  - virtualization
+  - kvm
+  - microvm
+  - containers
+  - linux
+  - infrastructure
+  - cli
+dependencies:
+  # The zypper modules, for openSUSE.
+  community.general: ">=9.0.0"
+repository: https://github.com/konradasb/ansible-collection-general
+documentation: https://github.com/konradasb/ansible-collection-general/blob/main/README.md
+homepage: https://github.com/konradasb/ansible-collection-general
+issues: https://github.com/konradasb/ansible-collection-general/issues
+build_ignore:
+  - .git
+  - .github
+  - .gitignore
+  - .editorconfig
+  - .ansible-lint
+  - .yamllint
+  - .ansible
+  - "*.tar.gz"
+  - roles/*/molecule

@@ -1,0 +1,128 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# Each platform runs systemd in a container, as dicerd is a service. Docker
+# gives the containers no /dev/kvm, so instances cannot start: this checks
+# what the role does, not Dicer itself.
+driver:
+  name: docker
+
+platforms:
+  - name: debian-12
+    image: debian:12
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: debian-13
+    image: debian:13
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: ubuntu-22.04
+    image: ubuntu:22.04
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: ubuntu-24.04
+    image: ubuntu:24.04
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: fedora
+    image: fedora:latest
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /usr/lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: rocky-9
+    image: rockylinux/rockylinux:9
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /usr/lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: rocky-10
+    image: rockylinux/rockylinux:10
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /usr/lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+  - name: opensuse-tumbleweed
+    image: opensuse/tumbleweed
+    dockerfile: Dockerfile.j2
+    pre_build_image: false
+    command: /usr/lib/systemd/systemd
+    privileged: true
+    cgroupns_mode: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    tmpfs:
+      - /run
+      - /tmp
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_DIFF_ALWAYS: "false"
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - destroy
+    - syntax
+    - create
+    - prepare
+    # On a fresh host, before the repository exists.
+    - check
+    - converge
+    - idempotence
+    - verify
+    - destroy

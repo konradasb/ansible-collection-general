@@ -1,0 +1,67 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+name: release
+
+# release-please keeps a pull request open that bumps galaxy.yml's version
+# and writes CHANGELOG.md from the conventional commits since the last
+# release. Merging it tags the release, and this run then publishes it: in
+# the same job, as a tag pushed with GITHUB_TOKEN starts no other workflow.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # The release pull request, its tag and the GitHub release.
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Release
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Checkout
+        if: steps.release.outputs.release_created
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
+          persist-credentials: false
+
+      - name: Setup Python
+        if: steps.release.outputs.release_created
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install ansible-core
+        if: steps.release.outputs.release_created
+        run: python3 -m pip install ansible-core
+
+      - name: Build
+        if: steps.release.outputs.release_created
+        run: ansible-galaxy collection build
+
+      - name: Publish to Ansible Galaxy
+        if: steps.release.outputs.release_created
+        run: ansible-galaxy collection publish "konradasb-general-$VERSION.tar.gz" --api-key "$GALAXY_API_KEY"
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+
+      - name: Attach the collection to the GitHub release
+        if: steps.release.outputs.release_created
+        run: gh release upload "$TAG" "konradasb-general-$VERSION.tar.gz" --repo "$GITHUB_REPOSITORY"
+        env:
+          TAG: ${{ steps.release.outputs.tag_name }}
+          VERSION: ${{ steps.release.outputs.version }}
+          GH_TOKEN: ${{ github.token }}

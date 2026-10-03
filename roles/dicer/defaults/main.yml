@@ -1,0 +1,28 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# The release to install, such as 0.3.0, or latest, which upgrades to each
+# new release as the role runs.
+dicer_version: latest
+
+# Where the dicer binary goes. It is installed whether or not the dicer
+# package, which the dicerd role installs, put one in /usr/bin.
+dicer_install_directory: /usr/local/bin
+
+# The releases the archives and their checksums are downloaded from.
+dicer_releases_url: https://github.com/konradasb/dicer/releases
+
+# Users whose remotes.yaml the role writes, replacing what is there, in
+# their configuration directory: ~/.config/dicer on Linux, and
+# ~/Library/Application Support/dicer on macOS. Empty leaves every user's as
+# it is.
+dicer_remotes_users: []
+
+# The remotes written, by name, as remotes.yaml has them: an address, and
+# for a TCP one, optionally tls with cert_file, key_file, ca_file and
+# server_name.
+dicer_remotes: {}
+
+# The remote commands go to unless told otherwise. Empty is the local daemon.
+dicer_remote_current: ""

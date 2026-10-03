@@ -1,0 +1,12 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Prepare
+  hosts: all
+  tasks:
+    # Without ~/.config, which the role must make the user's.
+    - name: Create a user
+      ansible.builtin.user:
+        name: alice
+        create_home: true

@@ -1,0 +1,46 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Check that the host is supported
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['system'] == 'Linux'
+      - ansible_facts['os_family'] in __dicerd_supported_os_families
+      - ansible_facts['architecture'] in __dicerd_supported_architectures
+    fail_msg: >-
+      Dicer's packages are for Debian, Ubuntu, Fedora, RHEL and its rebuilds,
+      and openSUSE, on x86_64 and aarch64, not {{ ansible_facts['distribution'] }}
+      on {{ ansible_facts['architecture'] }}.
+    quiet: true
+
+- name: Check that a version is not combined with latest
+  ansible.builtin.assert:
+    that:
+      - not (dicerd_version | length > 0 and dicerd_package_state == 'latest')
+    fail_msg: dicerd_version pins a version, which dicerd_package_state=latest would upgrade.
+    quiet: true
+
+- name: Check that the private key and certificate are given together
+  ansible.builtin.assert:
+    that:
+      - (dicerd_tls_certificate | length > 0) == (dicerd_tls_private_key | length > 0)
+    fail_msg: dicerd_tls_certificate and dicerd_tls_private_key are given together, or neither is.
+    quiet: true
+
+- name: Look for /dev/kvm
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: __dicerd_kvm
+  when: dicerd_kvm_check
+
+- name: Check that the host has KVM
+  ansible.builtin.assert:
+    that:
+      - __dicerd_kvm.stat.exists
+    fail_msg: >-
+      /dev/kvm is missing: Dicer needs KVM. On a cloud virtual machine, that
+      means one with nested virtualisation enabled. Set dicerd_kvm_check to
+      false to install Dicer anyway.
+    quiet: true
+  when: dicerd_kvm_check

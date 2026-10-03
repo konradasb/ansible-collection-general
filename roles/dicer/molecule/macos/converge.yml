@@ -1,0 +1,27 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Converge
+  hosts: all
+  vars:
+    __molecule_user: "{{ lookup('ansible.builtin.env', 'USER') }}"
+  pre_tasks:
+    - name: Check that this is CI, whose user's remotes may be replaced
+      ansible.builtin.assert:
+        that:
+          - lookup('ansible.builtin.env', 'CI') == 'true'
+        fail_msg: This scenario replaces your remotes.yaml. It runs only in CI.
+        quiet: true
+  tasks:
+    - name: Run the role
+      ansible.builtin.include_role:
+        name: konradasb.general.dicer
+      vars:
+        dicer_install_directory: "{{ lookup('ansible.builtin.env', 'RUNNER_TEMP') }}/bin"
+        dicer_remotes_users:
+          - "{{ __molecule_user }}"
+        dicer_remotes:
+          compute1:
+            address: compute1.example.com:7443
+        dicer_remote_current: compute1

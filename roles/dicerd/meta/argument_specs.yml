@@ -1,0 +1,119 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+argument_specs:
+  main:
+    short_description: Install and configure Dicer
+    description:
+      - Adds the Dicer package repository, installs the C(dicer) package, which
+        has the C(dicerd) daemon and the C(dicer) command line, writes
+        C(/etc/dicerd/config.yaml), and runs C(dicerd) as a systemd service.
+      - Supports Debian, Ubuntu, Fedora, RHEL and its rebuilds, and openSUSE,
+        on x86_64 and aarch64.
+    author:
+      - konradasb
+    options:
+      dicerd_version:
+        description:
+          - The C(dicer) package's version, such as C(0.3.0).
+          - Empty installs the newest the repository has, and leaves an
+            installed one as it is unless O(dicerd_package_state=latest).
+          - A version older than the installed one downgrades it.
+        type: str
+        default: ""
+      dicerd_package_state:
+        description:
+          - V(latest) upgrades Dicer on every run. It cannot be combined with
+            O(dicerd_version).
+        type: str
+        choices:
+          - present
+          - latest
+        default: present
+      dicerd_repository_manage:
+        description:
+          - Add the Dicer package repository, signed with Dicer's key.
+          - Off, the package must come from a repository set up some other
+            way.
+        type: bool
+        default: true
+      dicerd_repository_url:
+        description:
+          - The repository's base URL, which has the apt repository under
+            C(/deb) and the dnf and zypper one under C(/rpm).
+        type: str
+        default: https://pkg.dicer.sh
+      dicerd_repository_key_url:
+        description:
+          - The URL of the key the repository is signed with.
+        type: str
+        default: "{{ dicerd_repository_url }}/gpg.key"
+      dicerd_epel_manage:
+        description:
+          - Turn EPEL on, for C(erofs-utils), on RHEL and its rebuilds.
+          - Fedora and the other distributions need nothing.
+        type: bool
+        default: true
+      dicerd_kvm_check:
+        description:
+          - Fail before installing anything unless the host has C(/dev/kvm).
+        type: bool
+        default: true
+      dicerd_config:
+        description:
+          - The daemon's configuration, as the keys of
+            U(https://dicer.sh/docs/reference/configuration/).
+          - Merged, recursively, over the role's base, which gives the
+            daemon's socket to the C(dicer) group, and checked with
+            C(dicerd validate) before it replaces C(/etc/dicerd/config.yaml).
+          - A change restarts C(dicerd), which leaves running instances
+            running.
+          - A C(data_dir) or C(run_dir) other than the defaults is created
+            and added to the service's C(ReadWritePaths) in a drop-in.
+        type: dict
+        default: {}
+      dicerd_tls_certificate:
+        description:
+          - The TCP API's server certificate, as PEM, written to
+            C(/etc/dicerd/tls/server.pem) and set as C(api.tcp.tls.cert_file).
+          - C(api.tcp.listen), in O(dicerd_config), turns the TCP API on.
+        type: str
+        default: ""
+      dicerd_tls_private_key:
+        description:
+          - The server certificate's private key, as PEM, written to
+            C(/etc/dicerd/tls/server-key.pem), readable only by root, and set
+            as C(api.tcp.tls.key_file).
+        type: str
+        default: ""
+      dicerd_tls_client_ca:
+        description:
+          - The CA that client certificates must be signed by, as PEM,
+            written to C(/etc/dicerd/tls/ca.pem) and set as
+            C(api.tcp.tls.client_ca_file).
+          - Given, the TCP API requires a client certificate.
+        type: str
+        default: ""
+      dicerd_group_members:
+        description:
+          - Users added to the C(dicer) group, which can use the daemon's
+            socket without sudo. That is as much as root on the host.
+          - A user that does not exist is created.
+          - Users not in the list are left as they are.
+        type: list
+        elements: str
+        default: []
+      dicerd_service_enabled:
+        description:
+          - Start C(dicerd) at boot.
+        type: bool
+        default: true
+      dicerd_service_state:
+        description:
+          - Whether C(dicerd) is running.
+        type: str
+        choices:
+          - started
+          - stopped
+        default: started

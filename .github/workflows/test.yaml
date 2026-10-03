@@ -1,0 +1,159 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+name: test
+
+# Lint and sanity cover the whole collection on every change. Molecule tests
+# only the roles a change touches, or all of them when it touches what they
+# share, on a schedule, or by hand.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, as the distributions and the software change under the roles.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install the tools
+        run: python3 -m pip install ansible-core ansible-lint
+
+      - name: Lint
+        run: ansible-lint
+
+  sanity:
+    name: sanity (${{ matrix.ansible }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ansible:
+          - stable-2.18
+          - stable-2.19
+          - stable-2.20
+          - stable-2.21
+          - devel
+    steps:
+      - name: Sanity
+        uses: ansible-community/ansible-test-gh-action@6ded727edb598e670ac056a8e680ca4050bac0a3 # v1.18.0
+        with:
+          ansible-core-version: ${{ matrix.ansible }}
+          testing-type: sanity
+
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      empty: ${{ steps.matrix.outputs.empty }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+
+      - name: Find the scenarios to run
+        id: matrix
+        run: |
+          case "$EVENT" in
+          pull_request)
+            git diff --name-only "$BASE...$HEAD" | python3 .github/scripts/molecule-matrix.py
+            ;;
+          push)
+            # A pushed branch's first commit has nothing before it.
+            if [ "$BEFORE" = 0000000000000000000000000000000000000000 ]; then
+              python3 .github/scripts/molecule-matrix.py --all
+            else
+              git diff --name-only "$BEFORE" "$HEAD" | python3 .github/scripts/molecule-matrix.py
+            fi
+            ;;
+          *)
+            python3 .github/scripts/molecule-matrix.py --all
+            ;;
+          esac
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  molecule:
+    name: molecule (${{ matrix.role }}, ${{ matrix.scenario }}, ${{ matrix.platform || 'all' }})
+    needs: changes
+    if: needs.changes.outputs.empty == 'false'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install the tools
+        run: |
+          python3 -m pip install ansible-core molecule 'molecule-plugins[docker]'
+          ansible-galaxy collection install community.general community.docker
+
+      # An empty platform, as the matrix has once it is too large, runs them all.
+      - name: Test
+        working-directory: roles/${{ matrix.role }}
+        run: molecule test --scenario-name "$SCENARIO" ${PLATFORM:+--platform-name "$PLATFORM"}
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+          PLATFORM: ${{ matrix.platform }}
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
+
+  # One check that branch protection can require, whichever jobs the matrix
+  # had: it fails if any failed, and passes if none were needed.
+  molecule-result:
+    name: molecule
+    needs: [changes, molecule]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the results
+        run: |
+          case "$CHANGES/$MOLECULE" in
+          success/success | success/skipped) ;;
+          *)
+            echo "changes: $CHANGES, molecule: $MOLECULE" >&2
+            exit 1
+            ;;
+          esac
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          MOLECULE: ${{ needs.molecule.result }}

@@ -1,0 +1,12 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Install the dicer package
+  ansible.builtin.apt:
+    name: "dicer{{ '=' ~ dicerd_version if dicerd_version | length > 0 else '' }}"
+    state: "{{ dicerd_package_state }}"
+    allow_downgrade: "{{ dicerd_version | length > 0 }}"
+    cache_valid_time: 3600
+  register: __dicerd_package
+  when: not __dicerd_repository_pending

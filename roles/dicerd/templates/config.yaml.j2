@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+#
+# The dicerd configuration. Every setting is described at
+# https://dicer.sh/docs/reference/configuration/
+
+{{ __dicerd_config_effective | to_nice_yaml(indent=2, sort_keys=false) }}

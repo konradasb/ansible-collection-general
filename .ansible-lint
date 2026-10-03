@@ -1,0 +1,8 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+profile: production
+exclude_paths:
+  - .ansible/
+  - .github/

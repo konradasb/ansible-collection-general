@@ -1,0 +1,18 @@
+# What Ansible and systemd need, on each distribution's own image.
+FROM {{ item.image }}
+
+ENV container=docker
+
+RUN if command -v apt-get >/dev/null; then \
+      apt-get update && \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        python3 systemd systemd-sysv dbus ca-certificates openssl && \
+      rm -rf /var/lib/apt/lists/*; \
+    elif command -v dnf >/dev/null; then \
+      dnf install -y python3 systemd openssl && \
+      (dnf install -y python3-libdnf5 || true) && \
+      dnf clean all; \
+    elif command -v zypper >/dev/null; then \
+      zypper -n install python3 systemd gpg2 openssl && \
+      zypper clean -a; \
+    fi

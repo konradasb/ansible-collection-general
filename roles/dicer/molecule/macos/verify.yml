@@ -1,0 +1,33 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  vars:
+    __verify_binary: "{{ lookup('ansible.builtin.env', 'RUNNER_TEMP') }}/bin/dicer"
+  tasks:
+    - name: Read dicer's version
+      ansible.builtin.command: "{{ __verify_binary }} version --format json --remote unix:///nonexistent --timeout 1s"
+      environment:
+        DICER_CONFIG_DIR: /nonexistent
+      register: __verify_version
+      changed_when: false
+      failed_when: __verify_version.stdout | length == 0
+
+    - name: Check that it is the darwin build
+      ansible.builtin.assert:
+        that:
+          - (__verify_version.stdout | from_json).client.os == 'darwin'
+
+    # dicer reads the file from where the role wrote it, by default.
+    - name: List the remotes with dicer
+      ansible.builtin.command: "{{ __verify_binary }} remote list"
+      register: __verify_remote_list
+      changed_when: false
+
+    - name: Check that dicer read them
+      ansible.builtin.assert:
+        that:
+          - "'compute1' in __verify_remote_list.stdout"

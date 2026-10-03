@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+#
+# The data and run directories dicerd_config moves from the defaults, which
+# the service's ProtectSystem=strict leaves read-only otherwise.
+
+[Service]
+{% for path in __dicerd_read_write_paths %}
+ReadWritePaths={{ path }}
+{% endfor %}

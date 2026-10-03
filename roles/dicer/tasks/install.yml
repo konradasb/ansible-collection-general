@@ -1,0 +1,107 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# releases/latest redirects to the newest release's tag, without the
+# GitHub API's rate limit.
+- name: Find the latest release
+  ansible.builtin.uri:
+    url: "{{ dicer_releases_url }}/latest"
+    method: HEAD
+    follow_redirects: none
+    status_code: 302
+  register: __dicer_latest_release
+  check_mode: false
+  when: dicer_version == 'latest'
+
+- name: Set the version to install
+  ansible.builtin.set_fact:
+    __dicer_version_wanted: >-
+      {{
+        __dicer_latest_release.location | regex_findall('/tag/v?([^/]+)$') | first
+        if dicer_version == 'latest' else dicer_version | regex_replace('^v', '')
+      }}
+
+- name: Look for an installed dicer
+  ansible.builtin.stat:
+    path: "{{ __dicer_binary }}"
+  register: __dicer_binary_stat
+
+# The client's version is shown even when no daemon answers, which it then
+# exits 1 for. DICER_CONFIG_DIR keeps it from reading anyone's remotes.
+- name: Read the installed version
+  ansible.builtin.command:
+    argv:
+      - "{{ __dicer_binary }}"
+      - version
+      - --format
+      - json
+      - --remote
+      - unix:///nonexistent
+      - --timeout
+      - 1s
+  environment:
+    DICER_CONFIG_DIR: /nonexistent
+  register: __dicer_version_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: __dicer_binary_stat.stat.exists
+
+# The first version in the output is the client's.
+- name: Set the installed version
+  ansible.builtin.set_fact:
+    __dicer_version_current: >-
+      {{ __dicer_version_installed.stdout | default('') | regex_findall('"version":\s*"([^"]+)"') | first | default('') }}
+
+- name: Install the release
+  when: __dicer_version_current != __dicer_version_wanted
+  vars:
+    __dicer_archive: "dicer_{{ __dicer_version_wanted }}_{{ __dicer_operating_system }}_{{ __dicer_architecture }}.tar.gz"
+    __dicer_release_url: "{{ dicer_releases_url }}/download/v{{ __dicer_version_wanted }}"
+  block:
+    - name: Make a working directory
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: dicer.
+      register: __dicer_working_directory
+
+    - name: Download the archive
+      ansible.builtin.get_url:
+        url: "{{ __dicer_release_url }}/{{ __dicer_archive }}"
+        dest: "{{ __dicer_working_directory.path }}/{{ __dicer_archive }}"
+        checksum: "sha256:{{ __dicer_release_url }}/checksums.txt"
+        mode: "0644"
+
+    # unarchive needs GNU tar, which macOS does not have.
+    - name: Extract dicer
+      ansible.builtin.command:
+        argv:
+          - tar
+          - -xzf
+          - "{{ __dicer_working_directory.path }}/{{ __dicer_archive }}"
+          - -C
+          - "{{ __dicer_working_directory.path }}"
+          - dicer
+        creates: "{{ __dicer_working_directory.path }}/dicer"
+
+    - name: Create the install directory
+      ansible.builtin.file:
+        path: "{{ dicer_install_directory }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install dicer
+      ansible.builtin.copy:
+        src: "{{ __dicer_working_directory.path }}/dicer"
+        dest: "{{ __dicer_binary }}"
+        remote_src: true
+        mode: "0755"
+      when: not ansible_check_mode
+
+  always:
+    - name: Remove the working directory
+      ansible.builtin.file:
+        path: "{{ __dicer_working_directory.path }}"
+        state: absent
+      when: __dicer_working_directory.path is defined

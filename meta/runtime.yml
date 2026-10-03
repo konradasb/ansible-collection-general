@@ -1,0 +1,5 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+requires_ansible: ">=2.18.0"

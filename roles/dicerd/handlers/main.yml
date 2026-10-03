@@ -1,0 +1,17 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+# Running instances are separate processes, which outlive the daemon; the one
+# that starts takes them over.
+- name: Restart dicerd
+  ansible.builtin.systemd_service:
+    name: dicerd.service
+    state: restarted
+  when:
+    - dicerd_service_state == 'started'
+    - not (ansible_check_mode and __dicerd_package is skipped)

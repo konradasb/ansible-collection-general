@@ -1,0 +1,76 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read the configuration
+      ansible.builtin.slurp:
+        src: /etc/dicerd/config.yaml
+      register: __verify_config_file
+
+    - name: Check the configuration
+      vars:
+        __verify_config: "{{ __verify_config_file.content | b64decode | from_yaml }}"
+      ansible.builtin.assert:
+        that:
+          - __verify_config.data_dir == '/srv/dicer'
+          - __verify_config.log_level == 'debug'
+          - __verify_config.api.socket.group == 'dicer'
+          - __verify_config.api.tcp.listen == '127.0.0.1:7443'
+          - __verify_config.api.tcp.tls.cert_file == '/etc/dicerd/tls/server.pem'
+          - __verify_config.api.tcp.tls.key_file == '/etc/dicerd/tls/server-key.pem'
+          - __verify_config.api.tcp.tls.client_ca_file == '/etc/dicerd/tls/ca.pem'
+          - __verify_config.metrics.enable
+
+    - name: Validate the configuration
+      ansible.builtin.command: dicerd validate
+      changed_when: false
+
+    - name: Look at the private key
+      ansible.builtin.stat:
+        path: /etc/dicerd/tls/server-key.pem
+      register: __verify_private_key
+
+    - name: Check that only root can read the private key
+      ansible.builtin.assert:
+        that:
+          - __verify_private_key.stat.mode == '0600'
+          - __verify_private_key.stat.pw_name == 'root'
+
+    - name: Read the service's drop-in
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/dicerd.service.d/50-ansible-directories.conf
+      register: __verify_dropin
+
+    - name: Check that the service may write to the data directory
+      ansible.builtin.assert:
+        that:
+          - "'ReadWritePaths=/srv/dicer' in (__verify_dropin.content | b64decode)"
+
+    - name: Read the dicer group
+      ansible.builtin.getent:
+        database: group
+        key: dicer
+
+    - name: Check that molecule is in the dicer group
+      ansible.builtin.assert:
+        that:
+          - "'molecule' in ansible_facts['getent_group']['dicer'][2].split(',')"
+
+    - name: Read dicerd's state
+      ansible.builtin.systemd_service:
+        name: dicerd.service
+      register: __verify_service
+
+    - name: Check that dicerd runs and starts at boot
+      ansible.builtin.assert:
+        that:
+          - __verify_service.status.ActiveState == 'active'
+          - __verify_service.status.UnitFileState == 'enabled'
+
+    - name: Ask the daemon about itself, over its socket
+      ansible.builtin.command: dicer info
+      changed_when: false

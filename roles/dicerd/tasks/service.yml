@@ -1,0 +1,16 @@
+# Copyright 2026 konradasb
+# SPDX-License-Identifier: MIT
+
+---
+# A changed configuration restarts dicerd before the state below is checked,
+# so that a daemon the package started is not restarted twice.
+- name: Apply the changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Set dicerd's state
+  ansible.builtin.systemd_service:
+    name: dicerd.service
+    enabled: "{{ dicerd_service_enabled }}"
+    state: "{{ dicerd_service_state }}"
+  # In check mode, nor is the service the package would install.
+  when: not (ansible_check_mode and __dicerd_package is skipped)
