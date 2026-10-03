@@ -78,7 +78,7 @@ scenarios, in `roles/ROLE/molecule/`, run from the role's directory:
 
 ```console
 $ python3 -m pip install ansible-core ansible-lint molecule 'molecule-plugins[docker]'
-$ ansible-galaxy collection install community.general community.docker
+$ ansible-galaxy collection install community.general community.docker ansible.posix
 $ ansible-lint
 $ cd roles/dicerd
 $ molecule test                               # every platform

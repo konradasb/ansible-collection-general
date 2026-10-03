@@ -18,6 +18,7 @@
   "packages": {
     ".": {
       "package-name": "konradasb.general",
+      "initial-version": "0.1.0",
       "extra-files": [
         { "type": "generic", "path": "galaxy.yml" }
       ]

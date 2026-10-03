@@ -125,7 +125,7 @@ jobs:
       - name: Install the tools
         run: |
           python3 -m pip install ansible-core molecule 'molecule-plugins[docker]'
-          ansible-galaxy collection install community.general community.docker
+          ansible-galaxy collection install community.general community.docker ansible.posix
 
       # An empty platform, as the matrix has once it is too large, runs them all.
       - name: Test
